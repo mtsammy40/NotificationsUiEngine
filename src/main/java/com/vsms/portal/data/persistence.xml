@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="http://java.sun.com/xml/ns/persistence" version="2.0">
+
+    <persistence-unit name="persistenceUnit">
+        <class>com.vsms.portal.data.model.ChClients</class>
+        <class>com.vsms.portal.data.model.ChMessages</class>
+        <class>com.vsms.portal.data.model.ChMpesaCallbacks</class>
+        <class>com.vsms.portal.data.model.ChurchMembers</class>
+        <class>com.vsms.portal.data.model.ChurchMessages</class>
+        <class>com.vsms.portal.data.model.ChurchMpesaCallbacks</class>
+        <class>com.vsms.portal.data.model.ChurchTransactions</class>
+        <class>com.vsms.portal.data.model.MessageTrailer</class>
+        <class>com.vsms.portal.data.model.MpesaCallbacks</class>
+        <properties>
+            <property name="hibernate.connection.url" value="jdbc:mysql://localhost:3306/vsms"/>
+            <property name="hibernate.connection.driver_class" value="com.mysql.cj.jdbc.Driver"/>
+        </properties>
+    </persistence-unit>
+</persistence>
