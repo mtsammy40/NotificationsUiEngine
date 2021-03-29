@@ -33,7 +33,7 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<User> signUp(@RequestBody() User user) {
+    public ResponseEntity<User> signUp(@RequestBody() User user) throws Exception {
         user = userService.signUp(user);
         if(user != null) {
             return new ResponseEntity<>(user, HttpStatus.OK);

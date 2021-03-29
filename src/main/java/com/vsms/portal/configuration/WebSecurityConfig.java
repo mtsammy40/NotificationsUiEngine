@@ -1,6 +1,7 @@
 package com.vsms.portal.configuration;
 
 
+import com.vsms.portal.filter.PreProcessingFilter;
 import com.vsms.portal.utils.auth.JwtAuthenticationEntryPoint;
 import com.vsms.portal.utils.auth.JwtRequestFilter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,9 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
     private JwtRequestFilter jwtRequestFilter;
+
+    @Autowired
+    private PreProcessingFilter preProcessingFilter;
 
     @Autowired
     public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
@@ -66,5 +70,6 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
 // Add a filter to validate the tokens with every request
         httpSecurity.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+        httpSecurity.addFilterAfter(preProcessingFilter, UsernamePasswordAuthenticationFilter.class);
     }
 }

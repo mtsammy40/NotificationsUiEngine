@@ -8,6 +8,8 @@ public enum ApiStatus {
 
     // Client initiated errors -> 900 - 999
     BAD_REQUEST("901", "Bad Request", HttpStatus.BAD_REQUEST),
+    UNSEARCHABLE_ENTITY("902", "Search not supported for entity", HttpStatus.BAD_REQUEST),
+    INVALID_SEARCH_FIELD("903", "Invalid field in search parameters", HttpStatus.BAD_REQUEST),
 
     // Server side errors -> 800 - 899
     UNKNOWN_ERROR("801", "Unknown Error", HttpStatus.INTERNAL_SERVER_ERROR),

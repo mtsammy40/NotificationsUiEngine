@@ -29,7 +29,11 @@ public class ExceptionHandlerClass {
                 (e.getClass(), ResponseStatus.class) != null)
             throw e;
 
-        LOG.error("Error in controller | {}", e.getMessage());
+        if (e.getThrowable() != null) {
+            LOG.error("Error in controller | cause: {} | {}", e.getThrowable().getClass(), e.getThrowable().getMessage());
+        } else {
+            LOG.error("Error in controller | {}", e.getMessage());
+        }
 
         return new ApiResponse<>(e.getApiStatus(), null).build();
     }

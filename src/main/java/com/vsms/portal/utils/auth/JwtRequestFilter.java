@@ -1,12 +1,16 @@
 package com.vsms.portal.utils.auth;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.vsms.portal.data.model.User;
+import com.vsms.portal.data.repositories.UserRepository;
+import com.vsms.portal.utils.enums.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,6 +26,9 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
     @Autowired
     private JwtUserDetailsService jwtUserDetailsService;
+
+    @Autowired
+    UserRepository userRepository;
 
     @Autowired
     private JwtTokenUtil jwtTokenUtil;
@@ -66,6 +73,13 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 // that the current user is authenticated. So it passes the
 // Spring Security Configurations successfully.
                 SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+
+                // Put user data in request
+                Optional<User> userOptional = userRepository.findByEmail(username);
+                userOptional.ifPresent((user) -> {
+                    request.setAttribute(Strings.REQUEST_ATTRIBUTE_USER_KEY.getValue(), user);
+                });
+
             }
         }
         chain.doFilter(request, response);

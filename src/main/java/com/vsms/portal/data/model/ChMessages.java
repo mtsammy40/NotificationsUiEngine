@@ -25,6 +25,7 @@ public class ChMessages {
     private String message;
     private Timestamp dateCreated;
     private String transactionType;
+    private Client clientId;
 
     public ChMessages() {
     }
@@ -100,6 +101,16 @@ public class ChMessages {
 
     public void setTransactionType(String transactionType) {
         this.transactionType = transactionType;
+    }
+
+    @ManyToOne()
+    @JoinColumn(referencedColumnName = "id", name = "client_id")
+    public Client getClientId() {
+        return clientId;
+    }
+
+    public void setClientId(Client clientId) {
+        this.clientId = clientId;
     }
 
     @Override
