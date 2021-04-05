@@ -2,14 +2,17 @@ package com.vsms.portal.data.model;
 
 import java.util.List;
 import java.util.regex.Pattern;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import javax.persistence.*;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vsms.portal.data.exceptions.ValidationException;
 import com.vsms.portal.data.repositories.UserRepository;
+import com.vsms.portal.utils.enums.Roles;
+
 import org.apache.commons.lang3.StringUtils;
 
 @Entity
@@ -30,7 +33,7 @@ public class User {
     private String password;
     private String status;
     private Role role;
-    private Client client;
+    private Client clientId;
 
     private String token;
 
@@ -97,12 +100,12 @@ public class User {
 
     @ManyToOne()
     @JoinColumn(referencedColumnName = "id", name = "client_id")
-    public Client getClient() {
-        return client;
+    public Client getClientId() {
+        return clientId;
     }
 
-    public void setClient(Client client) {
-        this.client = client;
+    public void setClientId(Client client) {
+        this.clientId = client;
     }
 
     public String getStatus() {
@@ -121,6 +124,8 @@ public class User {
     public void setToken(String token) {
         this.token = token;
     }
+
+    
 
     public void validate(UserRepository repository, Action action) throws Exception {
         // Validate phone number format
@@ -145,5 +150,21 @@ public class User {
         }
         repository.save(this);
     }
+
+    public boolean hasAdminRole() {
+        return this.role != null && this.role.getTitle().equalsIgnoreCase(Roles.ADMIN.name());
+    }
+
+    @Override
+    public String toString() {
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            return mapper.writeValueAsString(this);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            return super.toString();
+        }
+    }
+
 
 }

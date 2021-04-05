@@ -73,6 +73,6 @@ public class Notification {
     }
 
     private void createEmail() {
-        this.setEmail(new Emails(recipient.getEmail(), recipient.getClient(), context));
+        this.setEmail(new Emails(recipient.getEmail(), recipient.getClientId(), context));
     }
 }

@@ -1,8 +1,10 @@
 package com.vsms.portal.controller;
 
 import com.vsms.portal.api.requests.LoginRequest;
+import com.vsms.portal.api.responses.ApiResponse;
 import com.vsms.portal.data.model.User;
 import com.vsms.portal.service.UserService;
+import com.vsms.portal.utils.enums.ApiStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,22 +25,22 @@ public class AuthController {
     }
 
     @RequestMapping(value = "/login", method = RequestMethod.POST)
-    public ResponseEntity<?> createAuthenticationToken(@RequestBody LoginRequest authenticationRequest) throws Exception {
+    public ResponseEntity<ApiResponse<User>> createAuthenticationToken(@RequestBody LoginRequest authenticationRequest) throws Exception {
         User user = userService.login(authenticationRequest);
         if (user != null) {
-            return ResponseEntity.ok(user);
+            return new ApiResponse<User>(user).build();
         } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return new ApiResponse<User>(ApiStatus.INVALID_CREDENTIALS, null).build();
         }
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<User> signUp(@RequestBody() User user) throws Exception {
+    public ResponseEntity<ApiResponse<User>> signUp(@RequestBody() User user) throws Exception {
         user = userService.signUp(user);
         if(user != null) {
-            return new ResponseEntity<>(user, HttpStatus.OK);
+            return new ApiResponse<User>(user).build();
         } else {
-            return new ResponseEntity<>(user, HttpStatus.valueOf(407));
+            return new ApiResponse<User>(ApiStatus.BAD_REQUEST, null).build();
         }
     }
 

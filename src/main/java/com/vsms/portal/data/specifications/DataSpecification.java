@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Optional;
 
 public class DataSpecification<T> implements Specification<T> {
-
+    Logger LOG = LogManager.getLogger(DataSpecification.class);
     /**
      *
      */
@@ -37,21 +37,22 @@ public class DataSpecification<T> implements Specification<T> {
     public Predicate toPredicate(Root<T> root, CriteriaQuery<?> query, CriteriaBuilder builder) {
         if (criteria.getOperation().equalsIgnoreCase(">")) {
             return builder.greaterThanOrEqualTo(
-              root.<String> get(criteria.getKey()), criteria.getValue().toString());
-        } 
-        else if (criteria.getOperation().equalsIgnoreCase("<")) {
+                    root.<String>get(criteria.getKey()), criteria.getValue().toString());
+        } else if (criteria.getOperation().equalsIgnoreCase("<")) {
             return builder.lessThanOrEqualTo(
-              root.<String> get(criteria.getKey()), criteria.getValue().toString());
-        } 
-        else if (criteria.getOperation().equalsIgnoreCase(":")) {
+                    root.<String>get(criteria.getKey()), criteria.getValue().toString());
+        } else if (criteria.getOperation().equalsIgnoreCase(":")) {
             if (root.get(criteria.getKey()).getJavaType() == String.class) {
                 return builder.like(
-                  root.<String>get(criteria.getKey()), "%" + criteria.getValue() + "%");
+                        root.<String>get(criteria.getKey()), "%" + criteria.getValue() + "%");
+            } else if (criteria.getIsJpaEntity()) {
+                LOG.info("Criteria value {} will be evaluated as {}", criteria.getOriginalValue(), Entity.class);
+                return builder.equal(root.get(criteria.getKey()).get("id"), Long.valueOf(criteria.getOriginalValue()));
             } else {
                 return builder.equal(root.get(criteria.getKey()), criteria.getValue());
             }
         }
-        return null;   
+        return null;
     }
 
     @Override

@@ -35,7 +35,7 @@ public class ExceptionHandlerClass {
             LOG.error("Error in controller | {}", e.getMessage());
         }
 
-        return new ApiResponse<>(e.getApiStatus(), null).build();
+        return new ApiResponse<>(e.getApiStatus(), null).addError(e.getMessage()).build();
     }
 
     @ExceptionHandler(value = Exception.class)

@@ -19,7 +19,7 @@ public class ChMessages {
     public static final Long STATUS_SENT = 1L;
     public static final Long STATUS_CREATION_FAILED = 99L;
 
-    private int id;
+    private Long id;
     private String msisdn;
     private Long status;
     private String message;
@@ -30,11 +30,12 @@ public class ChMessages {
     public ChMessages() {
     }
 
-    public ChMessages(String msisdn, Long status, String message) {
+    public ChMessages(String msisdn, Long status, String message, Client clientId) {
         try {
             this.msisdn = msisdn;
             this.status = status;
             this.message = message;
+            this.clientId = clientId;
         } catch (Exception e) {
             LOG.error("Error creating message for {} | {}", msisdn, e.getMessage());
             this.status = STATUS_CREATION_FAILED;
@@ -44,11 +45,11 @@ public class ChMessages {
     @Id
     @Column(name = "id", nullable = false)
     @GeneratedValue(strategy = GenerationType.AUTO)
-    public int getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(Long id) {
         this.id = id;
     }
 

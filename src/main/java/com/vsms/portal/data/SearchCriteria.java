@@ -19,13 +19,16 @@ public class SearchCriteria<T> {
     private String key;
     private String operation;
     private Object value;
+    private String originalValue;
     private Class propertyClass;
     private Class<T> parentClass;
+    private Boolean isJpaEntity = false;
 
     public SearchCriteria(String key, String operation, Object value, Class<T> parentClass) throws Exception {
         this.key = key;
         this.operation = operation;
         this.value = value;
+        this.originalValue = value.toString();
         setParentClass(parentClass);
     }
 
@@ -54,7 +57,7 @@ public class SearchCriteria<T> {
     }
 
     public boolean isOrPredicate() {
-        return true;
+        return false;
     }
 
     public Class getPropertyClass() {
@@ -74,7 +77,27 @@ public class SearchCriteria<T> {
         this.parentClass = parentClass;
     }
 
+    
+    public Boolean getIsJpaEntity() {
+        return isJpaEntity;
+    }
+
+    public void setIsJpaEntity(Boolean isEntity) {
+        this.isJpaEntity = isEntity;
+    }
+
+    public String getOriginalValue() {
+        return originalValue;
+    }
+
+    public void setOriginalValue(String originalValue) {
+        this.originalValue = originalValue;
+    }
+
+    
+
     private void validateCriteria(Class<T> clazz) throws Exception {
+        LOGGER.info("Evaluating {} >> {}", this.getKey(), clazz);
         List<Field> fieldList = Arrays.asList(clazz.getDeclaredFields());
         Optional<Field> fieldResult = fieldList.stream().filter((field -> field.getName().equalsIgnoreCase(this.getKey()))).findFirst();
         if(fieldResult.isPresent()){
@@ -86,7 +109,7 @@ public class SearchCriteria<T> {
         }
     }
 
-    private static <T> T getTypedValue(String value, Class<T> clazz) throws Exception {
+    private <T> T getTypedValue(String value, Class<T> clazz) throws Exception {
         if (clazz == Long.class || clazz == long.class) {
             return (T) new Long(value);
         } else if (clazz == BigInteger.class) {
@@ -95,6 +118,7 @@ public class SearchCriteria<T> {
             return (T) value;
         } else if (clazz.getAnnotation(Entity.class) != null) {
             // is JPA Entity class
+            this.isJpaEntity = true;
             Object instance = clazz.newInstance();
             try {
                 Field declaredField = clazz.getDeclaredField("id");
@@ -118,4 +142,5 @@ public class SearchCriteria<T> {
             throw new Exception("CONVERSION OF TYPE " + String.class + " TO " + clazz + " IS UNSUPPORTED");
         }
     }
+    
 }
