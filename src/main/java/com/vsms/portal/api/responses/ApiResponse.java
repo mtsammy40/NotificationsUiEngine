@@ -89,8 +89,13 @@ public class ApiResponse<T> {
         return errors;
     }
 
+    public  ApiResponse<?> withErrors(List<String> errors) {
+        this.errors.addAll(errors);
+        return this;
+    }
+
     public void addErrors(List<String> errors) {
-        this.errors = errors;
+        this.errors.addAll(errors);
     }
 
     public ApiResponse<?> addError(String error) {

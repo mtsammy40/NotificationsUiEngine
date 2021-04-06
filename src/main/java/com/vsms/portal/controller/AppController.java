@@ -8,6 +8,7 @@ import com.vsms.portal.exception.ApiOperationException;
 import com.vsms.portal.service.AppService;
 import com.vsms.portal.utils.enums.ApiStatus;
 
+import com.vsms.portal.utils.models.DashboardData;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -86,6 +87,12 @@ public class AppController {
     public ResponseEntity<ApiResponse<Page<TransactionsReportView>>> getTransactions(@RequestParam(name = "search", required = false) String search, HttpServletRequest request) throws Exception {
         Page<TransactionsReportView> transactions = appService.searchData(search, request, TransactionsReportView.class);
         return  new ApiResponse<Page<TransactionsReportView>>(ApiStatus.OK, transactions).build();
+    }
+
+    @GetMapping("/dashboard")
+    public ResponseEntity<ApiResponse<DashboardData>> getDashBoardData(HttpServletRequest request) throws Exception {
+        DashboardData dashboardData = appService.getDashboardData(request);
+        return  new ApiResponse<DashboardData>(ApiStatus.OK, dashboardData).build();
     }
 
 }

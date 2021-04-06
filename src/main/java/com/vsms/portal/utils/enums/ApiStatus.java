@@ -19,7 +19,8 @@ public enum ApiStatus {
 
     // Authentication errors -> 600 - 699
     INVALID_CREDENTIALS("601", "Invalid Credentials", HttpStatus.UNAUTHORIZED),
-    INSUFFICIENT_PERMISSIONS("602", "You are not allowed to access this resource", HttpStatus.FORBIDDEN);
+    INSUFFICIENT_PERMISSIONS("602", "You are not allowed to access this resource", HttpStatus.FORBIDDEN),
+    TOKEN_EXPIRED("603", "Your token has expired", HttpStatus.FORBIDDEN);
 
     private String code;
     private String message;

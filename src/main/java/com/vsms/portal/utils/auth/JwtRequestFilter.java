@@ -1,6 +1,8 @@
 package com.vsms.portal.utils.auth;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import javax.servlet.FilterChain;
@@ -10,6 +12,8 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.vsms.portal.data.model.User;
 import com.vsms.portal.data.repositories.UserRepository;
+import com.vsms.portal.exception.ApiOperationException;
+import com.vsms.portal.utils.enums.ApiStatus;
 import com.vsms.portal.utils.enums.Strings;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -45,18 +49,23 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         String jwtToken = null;
 // JWT Token is in the form "Bearer token". Remove Bearer word and get
 // only the Token
+        List<String> errors = new ArrayList<>();
         if (requestTokenHeader != null && requestTokenHeader.startsWith("Bearer ")) {
             jwtToken = requestTokenHeader.substring(7);
             try {
                 username = jwtTokenUtil.getUsernameFromToken(jwtToken);
             } catch (IllegalArgumentException e) {
                 logger.warn("Unable to get JWT Token");
+                errors.add("Unable to retrieve token");
             } catch (ExpiredJwtException e) {
                 logger.warn("JWT Token has expired");
+                errors.add("Token has expired");
             }
         } else {
             logger.warn("JWT Token does not begin with Bearer String");
+            errors.add("Token does not begin with bearer string");
         }
+        request.setAttribute(Strings.REQUEST_ATTRIBUTE_ERRORS_KEY.getValue(), errors);
 
 // Once we get the token validate it.
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {

@@ -30,6 +30,17 @@ public class ChMessages {
     public ChMessages() {
     }
 
+    public ChMessages(String msisdn, Long status, String message) {
+        try {
+            this.msisdn = msisdn;
+            this.status = status;
+            this.message = message;
+        } catch (Exception e) {
+            LOG.error("Error creating message for {} | {}", msisdn, e.getMessage());
+            this.status = STATUS_CREATION_FAILED;
+        }
+    }
+
     public ChMessages(String msisdn, Long status, String message, Client clientId) {
         try {
             this.msisdn = msisdn;

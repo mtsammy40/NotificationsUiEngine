@@ -1,5 +1,6 @@
 package com.vsms.portal.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 import com.vsms.portal.api.requests.PostMessageRequest;
@@ -12,9 +13,14 @@ import com.vsms.portal.data.repositories.ChTransactionsRepository;
 import com.vsms.portal.data.repositories.TransactionViewRepository;
 import com.vsms.portal.data.specifications.DataSpecificationBuilder;
 import com.vsms.portal.exception.ApiOperationException;
+import com.vsms.portal.exception.RestCallException;
 import com.vsms.portal.utils.enums.ApiStatus;
 import com.vsms.portal.utils.helpers.CommonFunctions;
+import com.vsms.portal.utils.helpers.Rest;
+import com.vsms.portal.utils.models.CoreResponse;
+import com.vsms.portal.utils.models.DashboardData;
 import com.vsms.portal.utils.models.FileMessageRow;
+import com.vsms.portal.utils.models.SmsBalanceResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -28,6 +34,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -42,11 +49,14 @@ public class AppService {
     private ChTransactionsRepository transactionsRepository;
     private TransactionViewRepository transactionViewRepository;
 
+    private Rest rest;
+
     public AppService(ChMessagesRepository messagesRepository, ChTransactionsRepository transactionsRepository,
-                      TransactionViewRepository transactionViewRepository) {
+                      TransactionViewRepository transactionViewRepository, Rest rest) {
         this.messagesRepository = messagesRepository;
         this.transactionsRepository = transactionsRepository;
         this.transactionViewRepository = transactionViewRepository;
+        this.rest = rest;
     }
 
     public List<ChMessages> uploadMessages(Reader reader, String transactionType, HttpServletRequest httpServletRequest) throws ApiOperationException {
@@ -93,6 +103,25 @@ public class AppService {
                         message.setStatus(ChMessages.STATUS_CREATION_FAILED);
                     }
                 }).collect(Collectors.toList());
+    }
+
+    public DashboardData getDashboardData(HttpServletRequest request) throws ApiOperationException {
+        DashboardData dashboardData = new DashboardData();
+        User user = CommonFunctions.extractUser(request);
+        // Get sms balance
+        try {
+            CoreResponse smsResponse = rest.smsBalance(user.getClientId().getId());
+            if(smsResponse.getResponseBody() != null) {
+                SmsBalanceResponse responseBody =new SmsBalanceResponse((Map) smsResponse.getResponseBody());
+                dashboardData.setSmsBalance(Long.valueOf(responseBody.getRunningBalance()));
+            } else {
+                dashboardData.setSmsBalance(0L);
+            }
+        } catch (RestCallException | JsonProcessingException e) {
+            e.printStackTrace();
+            dashboardData.setSmsBalance(0L);
+        }
+        return dashboardData;
     }
 
     public <T> Page<T> searchData(String search, HttpServletRequest request, Class<T> clazz) throws Exception {
