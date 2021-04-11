@@ -5,12 +5,17 @@ import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 import com.vsms.portal.api.requests.PostMessageRequest;
 import com.vsms.portal.controller.AppController;
+import com.vsms.portal.data.exceptions.ValidationException;
 import com.vsms.portal.data.model.ChMessages;
+import com.vsms.portal.data.model.Client;
 import com.vsms.portal.data.model.TransactionsReportView;
 import com.vsms.portal.data.model.User;
+import com.vsms.portal.data.model.User.Action;
 import com.vsms.portal.data.repositories.ChMessagesRepository;
 import com.vsms.portal.data.repositories.ChTransactionsRepository;
+import com.vsms.portal.data.repositories.ClientRepository;
 import com.vsms.portal.data.repositories.TransactionViewRepository;
+import com.vsms.portal.data.repositories.UserRepository;
 import com.vsms.portal.data.specifications.DataSpecificationBuilder;
 import com.vsms.portal.exception.ApiOperationException;
 import com.vsms.portal.exception.RestCallException;
@@ -35,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -45,21 +51,28 @@ import javax.servlet.http.HttpServletRequest;
 public class AppService {
     private final Logger LOG = LogManager.getLogger(AppController.class);
 
+    private UserService userService;
+
     private ChMessagesRepository messagesRepository;
     private ChTransactionsRepository transactionsRepository;
     private TransactionViewRepository transactionViewRepository;
-
+    private UserRepository userRepository;
+    private ClientRepository clientRepository;
     private Rest rest;
 
     public AppService(ChMessagesRepository messagesRepository, ChTransactionsRepository transactionsRepository,
-                      TransactionViewRepository transactionViewRepository, Rest rest) {
+            TransactionViewRepository transactionViewRepository, UserRepository userRepository, ClientRepository clientRepository, UserService userService, Rest rest) {
         this.messagesRepository = messagesRepository;
         this.transactionsRepository = transactionsRepository;
         this.transactionViewRepository = transactionViewRepository;
+        this.userRepository = userRepository;
+        this.clientRepository = clientRepository;
+        this.userService = userService;
         this.rest = rest;
     }
 
-    public List<ChMessages> uploadMessages(Reader reader, String transactionType, HttpServletRequest httpServletRequest) throws ApiOperationException {
+    public List<ChMessages> uploadMessages(Reader reader, String transactionType, HttpServletRequest httpServletRequest)
+            throws ApiOperationException {
         List<List<String>> records = new ArrayList<List<String>>();
         User user = CommonFunctions.extractUser(httpServletRequest);
         try (CSVReader csvReader = new CSVReader(reader);) {
@@ -80,7 +93,27 @@ public class AppService {
         return null;
     }
 
-    public List<ChMessages> postMessages(PostMessageRequest request, HttpServletRequest httpServletRequest) throws ApiOperationException {
+    public User postUser(User user, HttpServletRequest request) throws Exception {
+        // Check if user record exists to knoe whether its a creation on an update
+        Optional<User> userResult = Optional.empty();
+        if(user.getId() != null) {
+            userResult = userRepository.findById(user.getId());
+        }
+        if(userResult.isPresent()) {
+            try {
+            user.validate(userRepository, Action.UPDATE);
+            } catch (ValidationException e) {
+                throw new ApiOperationException("Validation failed: "+ e.getMessage(), ApiStatus.BAD_REQUEST);
+            }
+            userRepository.save(user);
+        } else {
+           user = userService.signUp(user);
+        }
+        return user;
+    }
+
+    public List<ChMessages> postMessages(PostMessageRequest request, HttpServletRequest httpServletRequest)
+            throws ApiOperationException {
         request.validate();
 
         LOG.info("Processing request ...");
@@ -89,7 +122,8 @@ public class AppService {
 
         return request.getPhoneNumberList().parallelStream()
                 .peek((number) -> LOG.info("Creating message record... | {}", number))
-                .map((phoneNumber) -> new ChMessages(phoneNumber, ChMessages.STATUS_PENDING, request.getMessage(), user.getClientId()))
+                .map((phoneNumber) -> new ChMessages(phoneNumber, ChMessages.STATUS_PENDING, request.getMessage(),
+                        user.getClientId()))
                 .peek((message) -> {
                     try {
                         message.setTransactionType("DEPOSIT");
@@ -111,8 +145,8 @@ public class AppService {
         // Get sms balance
         try {
             CoreResponse smsResponse = rest.smsBalance(user.getClientId().getId());
-            if(smsResponse.getResponseBody() != null) {
-                SmsBalanceResponse responseBody =new SmsBalanceResponse((Map) smsResponse.getResponseBody());
+            if (smsResponse.getResponseBody() != null) {
+                SmsBalanceResponse responseBody = new SmsBalanceResponse((Map) smsResponse.getResponseBody());
                 dashboardData.setSmsBalance(Long.valueOf(responseBody.getRunningBalance()));
             } else {
                 dashboardData.setSmsBalance(0L);
@@ -154,6 +188,10 @@ public class AppService {
             page = messagesRepository.findAll((Specification<ChMessages>) specification, pageable);
         } else if (className.equalsIgnoreCase(TransactionsReportView.class.getName())) {
             page = transactionViewRepository.findAll((Specification<TransactionsReportView>) specification, pageable);
+        } else if (className.equalsIgnoreCase(User.class.getName())) {
+            page = userRepository.findAll((Specification<User>) specification, pageable);
+        } else if (className.equalsIgnoreCase(Client.class.getName())) {
+            page = clientRepository.findAll((Specification<Client>) specification, pageable);
         } else {
             throw new ApiOperationException("Search not implemented for this entity [ " + clazz.getSimpleName() + " ]",
                     ApiStatus.UNSEARCHABLE_ENTITY);
@@ -162,8 +200,9 @@ public class AppService {
     }
 
     /**
-     * Injects client id to search string to enforce retrieval of records in that client if the client does not
-     * have the admin role. If the user has an admin role, the seach string remains unaltered.
+     * Injects client id to search string to enforce retrieval of records in that
+     * client if the client does not have the admin role. If the user has an admin
+     * role, the seach string remains unaltered.
      *
      * @param searchString
      * @param request

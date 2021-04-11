@@ -46,6 +46,8 @@ public class ExceptionHandlerClass {
         }
         errorsList.add(e.getMessage());
 
+        e.printStackTrace();
+
         return new ApiResponse<>(e.getApiStatus(), null).withErrors(errorsList).build();
     }
 

@@ -129,7 +129,7 @@ public class User {
 
     public void validate(UserRepository repository, Action action) throws Exception {
         // Validate phone number format
-        boolean phoneIsValid = Pattern.compile("/^(254)([0-9]){9}$/g").matcher(phone).matches();
+        boolean phoneIsValid = Pattern.compile("^(254)([0-9]){9}$").matcher(phone).matches();
         if (StringUtils.isBlank(phone)) {
             throw new ValidationException("Phone is required!");
         }
@@ -148,7 +148,6 @@ public class User {
         } else if (action.equals(Action.UPDATE)) {
             this.setStatus(Status.UPDATE_ONGOING.name());
         }
-        repository.save(this);
     }
 
     public boolean hasAdminRole() {

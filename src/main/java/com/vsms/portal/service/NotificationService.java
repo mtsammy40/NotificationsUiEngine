@@ -9,6 +9,6 @@ import java.io.IOException;
 
 @Service
 public interface NotificationService {
-    void send(Notification notification) throws IOException, MessagingException;
-    void sendSuccessfulRegistration(User user) throws IOException, MessagingException;
+    void send(Notification notification, Boolean async) throws IOException, MessagingException;
+    void sendSuccessfulRegistration(User user, String Password) throws IOException, MessagingException;
 }

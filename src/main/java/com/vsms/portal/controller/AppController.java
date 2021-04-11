@@ -3,7 +3,9 @@ package com.vsms.portal.controller;
 import com.vsms.portal.api.requests.PostMessageRequest;
 import com.vsms.portal.api.responses.ApiResponse;
 import com.vsms.portal.data.model.ChMessages;
+import com.vsms.portal.data.model.Client;
 import com.vsms.portal.data.model.TransactionsReportView;
+import com.vsms.portal.data.model.User;
 import com.vsms.portal.exception.ApiOperationException;
 import com.vsms.portal.service.AppService;
 import com.vsms.portal.utils.enums.ApiStatus;
@@ -41,7 +43,8 @@ public class AppController {
 
     @PostMapping(value = "/uploadSmsFile")
     public ResponseEntity<ApiResponse<Object>> upload(@RequestParam("file") MultipartFile file,
-            @RequestParam("transactionType") String transactionType, HttpServletRequest request) throws IOException, ApiOperationException {
+            @RequestParam("transactionType") String transactionType, HttpServletRequest request)
+            throws IOException, ApiOperationException {
         if (!file.isEmpty()) {
             String extension = FilenameUtils
                     .getExtension(Objects.requireNonNull(file.getOriginalFilename()).trim().toLowerCase());
@@ -69,30 +72,57 @@ public class AppController {
     }
 
     @PostMapping(value = "/postMessage")
-    public ResponseEntity<ApiResponse<?>> postSms(@RequestBody() PostMessageRequest request, HttpServletRequest httpServletRequest)
-            throws ApiOperationException {
+    public ResponseEntity<ApiResponse<?>> postSms(@RequestBody() PostMessageRequest request,
+            HttpServletRequest httpServletRequest) throws ApiOperationException {
         List<ChMessages> processedMessages = appService.postMessages(request, httpServletRequest);
         return new ResponseEntity<ApiResponse<?>>(new ApiResponse<>(processedMessages), HttpStatus.OK);
     }
 
     @GetMapping("/messages")
     public ResponseEntity<ApiResponse<Page<ChMessages>>> getMessages(
-            @RequestParam(name = "search", required = false) String search, HttpServletRequest request) throws Exception {
+            @RequestParam(name = "search", required = false) String search, HttpServletRequest request)
+            throws Exception {
         Page<ChMessages> messagesPage = appService.searchData(search, request, ChMessages.class);
         return new ApiResponse<Page<ChMessages>>(ApiStatus.OK, messagesPage).build();
 
     }
 
+    @GetMapping("/users")
+    public ResponseEntity<ApiResponse<Page<User>>> getUsers(
+            @RequestParam(name = "search", required = false) String search, HttpServletRequest request) throws Exception {
+        Page<User> messagesPage = appService.searchData(search, request, User.class);
+        return new ApiResponse<Page<User>>(ApiStatus.OK, messagesPage).build();
+    }
+
+    @PostMapping("/user")
+    public ResponseEntity<ApiResponse<User>> postUser(
+           @RequestBody() User user, HttpServletRequest request) throws Exception {
+        User userResponse = appService.postUser(user, request);
+        return new ApiResponse<User>(ApiStatus.OK, userResponse).build();
+
+    }
+
+    @GetMapping("/clients")
+    public ResponseEntity<ApiResponse<Page<Client>>> getClients(
+            @RequestParam(name = "search", required = false) String search, HttpServletRequest request)
+            throws Exception {
+        Page<Client> messagesPage = appService.searchData(search, request, Client.class);
+        return new ApiResponse<Page<Client>>(ApiStatus.OK, messagesPage).build();
+    }
+
     @GetMapping("/transactions")
-    public ResponseEntity<ApiResponse<Page<TransactionsReportView>>> getTransactions(@RequestParam(name = "search", required = false) String search, HttpServletRequest request) throws Exception {
-        Page<TransactionsReportView> transactions = appService.searchData(search, request, TransactionsReportView.class);
-        return  new ApiResponse<Page<TransactionsReportView>>(ApiStatus.OK, transactions).build();
+    public ResponseEntity<ApiResponse<Page<TransactionsReportView>>> getTransactions(
+            @RequestParam(name = "search", required = false) String search, HttpServletRequest request)
+            throws Exception {
+        Page<TransactionsReportView> transactions = appService.searchData(search, request,
+                TransactionsReportView.class);
+        return new ApiResponse<Page<TransactionsReportView>>(ApiStatus.OK, transactions).build();
     }
 
     @GetMapping("/dashboard")
     public ResponseEntity<ApiResponse<DashboardData>> getDashBoardData(HttpServletRequest request) throws Exception {
         DashboardData dashboardData = appService.getDashboardData(request);
-        return  new ApiResponse<DashboardData>(ApiStatus.OK, dashboardData).build();
+        return new ApiResponse<DashboardData>(ApiStatus.OK, dashboardData).build();
     }
 
 }

@@ -2,13 +2,33 @@ package com.vsms.portal.data.model;
 
 import com.vsms.portal.utils.models.Notification;
 
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.persistence.*;
 import java.sql.Timestamp;
+import java.util.Map;
 
 @Entity
 public class Emails {
+    private final Logger LOG = LoggerFactory.getLogger(Emails.class); 
     public static final String defaultRegistrationContent = "<h1>Great to have you</h1><p>kindly follow this link to access the portal {{link}} </p>";
 
+    public enum DefaultContent {
+        REGISTRATION_SUCCESS(
+                "<h1>Great to have you</h1><p>Kindly log in with email: {{email}} and password: {{password}} </p>");
+
+        private final String body;
+
+        DefaultContent(String body) {
+            this.body = body;
+        }
+
+        public String getBody() {
+            return body;
+        }
+    }
 
     private int id;
     private String recipient;
@@ -23,17 +43,17 @@ public class Emails {
     public Emails() {
     }
 
-    public Emails(String recipient, Client clientId, Notification.Context context) {
+    public Emails(String recipient, Client clientId, Notification.Context context, Map<String, String> parameters) {
         this.recipient = recipient;
         this.clientId = clientId;
         this.context = context;
         this.emailContext = context.name();
-        this.setEmailContent(Emails.defaultRegistrationContent);
+        this.setEmailContent(getEnrichedContent(parameters));
         this.setStatus(Notification.Status.PENDING.name());
     }
 
     @Id
-    @GeneratedValue(strategy= GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     public int getId() {
         return id;
     }
@@ -114,14 +134,33 @@ public class Emails {
 
     @Override
     public String toString() {
-        return "Emails{" +
-                "id=" + id +
-                ", recipient='" + recipient + '\'' +
-                ", emailContext='" + emailContext + '\'' +
-                ", timeSent=" + timeSent +
-                ", status='" + status + '\'' +
-                ", emailContent='" + emailContent + '\'' +
-                ", clientId=" + clientId +
-                '}';
+        return "Emails{" + "id=" + id + ", recipient='" + recipient + '\'' + ", emailContext='" + emailContext + '\''
+                + ", timeSent=" + timeSent + ", status='" + status + '\'' + ", emailContent='" + emailContent + '\''
+                + ", clientId=" + clientId + '}';
+    }
+
+    private String getEnrichedContent(Map<String, String> parameters) {
+        String content = getContentBody(this.context);
+        return parameters.keySet().stream()
+                // escape curly braces
+                .filter((key) -> {
+                    return StringUtils.isNotBlank(key) && StringUtils.isNotBlank(parameters.get(key));
+                }).map((key) -> "\\{\\{" + key + "\\}\\}")
+                // remove null values
+                .peek((key) -> LOG.info("Email content: {} | key {}", content, key))
+                .reduce(content, (editedContent, key) -> editedContent.replaceAll(key, parameters.get(clean(key))));
+    }
+
+    /**
+     * Removes anything that is not alphanumeric from the string
+     * @param {String} string
+     * @return {String}
+     */
+    private String clean(String string) {
+        return string.replaceAll("[^a-zA-Z0-9]", "");  
+    }
+
+    private String getContentBody(Notification.Context context) {
+        return DefaultContent.valueOf(context.name()).getBody();
     }
 }

@@ -11,6 +11,8 @@ import com.vsms.portal.utils.auth.JwtUserDetailsService;
 import com.vsms.portal.utils.enums.ApiStatus;
 import com.vsms.portal.utils.models.Notification;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -25,6 +27,8 @@ import java.util.Optional;
 
 @Service
 public class UserService {
+
+    private static final Logger LOG= LoggerFactory.getLogger(UserService.class);
 
     private UserRepository userRepository;
 
@@ -41,7 +45,9 @@ public class UserService {
     private NotificationService notificationService;
 
     @Autowired
-    public UserService(UserRepository userRepository, AuthenticationManager authenticationManager, JwtTokenUtil jwtTokenUtil, JwtUserDetailsService userDetailsService, CacheService cache, PasswordEncoder passwordEncoder, NotificationService notificationService) {
+    public UserService(UserRepository userRepository, AuthenticationManager authenticationManager,
+            JwtTokenUtil jwtTokenUtil, JwtUserDetailsService userDetailsService, CacheService cache,
+            PasswordEncoder passwordEncoder, NotificationService notificationService) {
         this.userRepository = userRepository;
         this.authenticationManager = authenticationManager;
         this.jwtTokenUtil = jwtTokenUtil;
@@ -58,8 +64,7 @@ public class UserService {
     public User login(LoginRequest loginRequest) throws Exception {
         authenticate(loginRequest.getEmail(), loginRequest.getPassword());
 
-        final UserDetails userDetails = userDetailsService
-                .loadUserByUsername(loginRequest.getEmail());
+        final UserDetails userDetails = userDetailsService.loadUserByUsername(loginRequest.getEmail());
         User user = (User) cache.getStore().get(userDetails.getUsername());
 
         final String token = jwtTokenUtil.generateToken(userDetails);
@@ -68,18 +73,33 @@ public class UserService {
     }
 
     public User signUp(User user) throws Exception {
-        // TODO -> send email first
         try {
             user.validate(userRepository, User.Action.CREATION);
-        } catch (Exception e) {
+        } catch (ValidationException e) {
             throw new ApiOperationException(e.getMessage(), ApiStatus.BAD_REQUEST);
         }
+
         // Generate and set password
-        String generatedPassword = passwordEncoder.encode(RandomStringUtils.randomAlphanumeric(10));
-        user.setPassword(generatedPassword);
-        user = userRepository.save(user);
+        String password = null;
+        try {
+            password = RandomStringUtils.randomAlphanumeric(10);
+            String encryptedPassword = passwordEncoder.encode(password);
+            user.setPassword(encryptedPassword);
+            user.setStatus(User.Status.ACTIVE.name());
+            user = userRepository.save(user);
+        } catch (Exception e) {
+            // Allow the error to propagate to the Exception Handler
+            throw e;
+        }
+        
         // send email to notify user
-        notificationService.sendSuccessfulRegistration(user);
+        try {
+            notificationService.sendSuccessfulRegistration(user, password);
+        } catch (Exception e) {
+            // Since the user is already created, just return a success response.
+            e.printStackTrace();
+            LOG.error("Registration Email sending failed! | error: {} | user: {}", e.getMessage(), user);
+        }
         return user;
     }
 

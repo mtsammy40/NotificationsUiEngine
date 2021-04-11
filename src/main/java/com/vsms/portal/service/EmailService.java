@@ -6,5 +6,5 @@ import javax.mail.MessagingException;
 import java.io.IOException;
 
 public interface EmailService {
-    void send(Emails email) throws IOException, MessagingException;
+    void send(Emails email, Boolean async);
 }
