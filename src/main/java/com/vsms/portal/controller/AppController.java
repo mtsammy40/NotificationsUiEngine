@@ -79,18 +79,18 @@ public class AppController {
     }
 
     @GetMapping("/messages")
-    public ResponseEntity<ApiResponse<Page<ChMessages>>> getMessages(
-            @RequestParam(name = "search", required = false) String search, HttpServletRequest request)
+    public ResponseEntity<ApiResponse<Page<ChMessages>>> getMessages(@RequestParam() Map<String, String> queryParams,
+            HttpServletRequest request)
             throws Exception {
-        Page<ChMessages> messagesPage = appService.searchData(search, request, ChMessages.class);
+        Page<ChMessages> messagesPage = appService.searchData(queryParams, request, ChMessages.class);
         return new ApiResponse<Page<ChMessages>>(ApiStatus.OK, messagesPage).build();
 
     }
 
     @GetMapping("/users")
-    public ResponseEntity<ApiResponse<Page<User>>> getUsers(
-            @RequestParam(name = "search", required = false) String search, HttpServletRequest request) throws Exception {
-        Page<User> messagesPage = appService.searchData(search, request, User.class);
+    public ResponseEntity<ApiResponse<Page<User>>> getUsers(@RequestParam() Map<String, String> queryParams,
+             HttpServletRequest request) throws Exception {
+        Page<User> messagesPage = appService.searchData(queryParams, request, User.class);
         return new ApiResponse<Page<User>>(ApiStatus.OK, messagesPage).build();
     }
 
@@ -103,18 +103,18 @@ public class AppController {
     }
 
     @GetMapping("/clients")
-    public ResponseEntity<ApiResponse<Page<Client>>> getClients(
-            @RequestParam(name = "search", required = false) String search, HttpServletRequest request)
+    public ResponseEntity<ApiResponse<Page<Client>>> getClients(@RequestParam() Map<String, String> queryParams, 
+            HttpServletRequest request)
             throws Exception {
-        Page<Client> messagesPage = appService.searchData(search, request, Client.class);
+        Page<Client> messagesPage = appService.searchData(queryParams, request, Client.class);
         return new ApiResponse<Page<Client>>(ApiStatus.OK, messagesPage).build();
     }
 
     @GetMapping("/transactions")
     public ResponseEntity<ApiResponse<Page<TransactionsReportView>>> getTransactions(
-            @RequestParam(name = "search", required = false) String search, HttpServletRequest request)
+            @RequestParam() Map<String, String> queryParams, HttpServletRequest request)
             throws Exception {
-        Page<TransactionsReportView> transactions = appService.searchData(search, request,
+        Page<TransactionsReportView> transactions = appService.searchData(queryParams, request,
                 TransactionsReportView.class);
         return new ApiResponse<Page<TransactionsReportView>>(ApiStatus.OK, transactions).build();
     }

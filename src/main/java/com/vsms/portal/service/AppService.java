@@ -20,27 +20,32 @@ import com.vsms.portal.data.specifications.DataSpecificationBuilder;
 import com.vsms.portal.exception.ApiOperationException;
 import com.vsms.portal.exception.RestCallException;
 import com.vsms.portal.utils.enums.ApiStatus;
+import com.vsms.portal.utils.enums.CoreRequestTypes;
+import com.vsms.portal.utils.helpers.AsyncRest;
 import com.vsms.portal.utils.helpers.CommonFunctions;
 import com.vsms.portal.utils.helpers.Rest;
-import com.vsms.portal.utils.models.CoreResponse;
-import com.vsms.portal.utils.models.DashboardData;
-import com.vsms.portal.utils.models.FileMessageRow;
-import com.vsms.portal.utils.models.SmsBalanceResponse;
+import com.vsms.portal.utils.models.*;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -61,7 +66,7 @@ public class AppService {
     private Rest rest;
 
     public AppService(ChMessagesRepository messagesRepository, ChTransactionsRepository transactionsRepository,
-            TransactionViewRepository transactionViewRepository, UserRepository userRepository, ClientRepository clientRepository, UserService userService, Rest rest) {
+                      TransactionViewRepository transactionViewRepository, UserRepository userRepository, ClientRepository clientRepository, UserService userService, Rest rest) {
         this.messagesRepository = messagesRepository;
         this.transactionsRepository = transactionsRepository;
         this.transactionViewRepository = transactionViewRepository;
@@ -96,18 +101,18 @@ public class AppService {
     public User postUser(User user, HttpServletRequest request) throws Exception {
         // Check if user record exists to knoe whether its a creation on an update
         Optional<User> userResult = Optional.empty();
-        if(user.getId() != null) {
+        if (user.getId() != null) {
             userResult = userRepository.findById(user.getId());
         }
-        if(userResult.isPresent()) {
+        if (userResult.isPresent()) {
             try {
-            user.validate(userRepository, Action.UPDATE);
+                user.validate(userRepository, Action.UPDATE);
             } catch (ValidationException e) {
-                throw new ApiOperationException("Validation failed: "+ e.getMessage(), ApiStatus.BAD_REQUEST);
+                throw new ApiOperationException("Validation failed: " + e.getMessage(), ApiStatus.BAD_REQUEST);
             }
             userRepository.save(user);
         } else {
-           user = userService.signUp(user);
+            user = userService.signUp(user);
         }
         return user;
     }
@@ -143,26 +148,51 @@ public class AppService {
         DashboardData dashboardData = new DashboardData();
         User user = CommonFunctions.extractUser(request);
         // Get sms balance
+        List<Future<Object>> results = null;
         try {
-            CoreResponse smsResponse = rest.smsBalance(user.getClientId().getId());
+            List<Callable<Object>> callables = new ArrayList<>();
+            callables.add(new AsyncRest(rest, new AsyncCoreRequest(user.getClientId().getId(), CoreRequestTypes.DASH_SUMMARY)));
+            callables.add(new AsyncRest(rest, new AsyncCoreRequest(user.getClientId().getId(), CoreRequestTypes.SMS_BALANCE)));
+
+            results = ForkJoinPool.commonPool().invokeAll(callables);
+
+            CoreResponse smsResponse = (CoreResponse) results.get(1).get();
             if (smsResponse.getResponseBody() != null) {
                 SmsBalanceResponse responseBody = new SmsBalanceResponse((Map) smsResponse.getResponseBody());
-                dashboardData.setSmsBalance(Long.valueOf(responseBody.getRunningBalance()));
+                dashboardData.setSmsBalance(responseBody.getRunningBalance());
             } else {
-                dashboardData.setSmsBalance(0L);
+                dashboardData.setSmsBalance(BigDecimal.ZERO);
             }
-        } catch (RestCallException | JsonProcessingException e) {
+        } catch (ExecutionException | InterruptedException e) {
             e.printStackTrace();
-            dashboardData.setSmsBalance(0L);
+            dashboardData.setSmsBalance(BigDecimal.ZERO);
+        }
+
+        try {
+            // get summary
+            Map<String, Integer> summaryResponse = (Map) results.get(0).get();
+            if (summaryResponse != null) {
+                dashboardData.setSummary(summaryResponse.getOrDefault("Success", 0),
+                        summaryResponse.getOrDefault("Failed", 0),
+                        summaryResponse.getOrDefault("Sent", 0));
+            } else {
+                dashboardData.setSummary(0L, 0L, 0L);
+            }
+        } catch (ExecutionException | InterruptedException e) {
+            e.printStackTrace();
+            dashboardData.setSummary(0L, 0L, 0L);
         }
         return dashboardData;
     }
 
-    public <T> Page<T> searchData(String search, HttpServletRequest request, Class<T> clazz) throws Exception {
+    public <T> Page<T> searchData(Map<String, String> queryParams, HttpServletRequest request, Class<T> clazz) throws Exception {
+        String search = queryParams.getOrDefault("search", "");
         search = injectClientId(search, request);
+        // get PageRequest Data
+        PageRequest pageRequest = CommonFunctions.getPageData(queryParams);
         Specification<T> specification = buildSpecification(search, clazz);
         try {
-            return fetch(specification, clazz);
+            return fetch(specification, clazz, pageRequest);
         } catch (InvalidDataAccessApiUsageException e) {
             throw new ApiOperationException("Invalid field in search parameters", ApiStatus.INVALID_SEARCH_FIELD, e);
         }
@@ -179,19 +209,17 @@ public class AppService {
         return builder.build();
     }
 
-    private <T> Page<T> fetch(Specification<T> specification, Class<T> clazz) throws Exception {
+    private <T> Page<T> fetch(Specification<T> specification, Class<T> clazz, PageRequest pageRequest) throws Exception {
         Page page = null;
-        // TODO: Change below to dynamic
-        Pageable pageable = Pageable.unpaged();
         String className = clazz.getName();
         if (className.equalsIgnoreCase(ChMessages.class.getName())) {
-            page = messagesRepository.findAll((Specification<ChMessages>) specification, pageable);
+            page = messagesRepository.findAll((Specification<ChMessages>) specification, pageRequest);
         } else if (className.equalsIgnoreCase(TransactionsReportView.class.getName())) {
-            page = transactionViewRepository.findAll((Specification<TransactionsReportView>) specification, pageable);
+            page = transactionViewRepository.findAll((Specification<TransactionsReportView>) specification, pageRequest);
         } else if (className.equalsIgnoreCase(User.class.getName())) {
-            page = userRepository.findAll((Specification<User>) specification, pageable);
+            page = userRepository.findAll((Specification<User>) specification, pageRequest);
         } else if (className.equalsIgnoreCase(Client.class.getName())) {
-            page = clientRepository.findAll((Specification<Client>) specification, pageable);
+            page = clientRepository.findAll((Specification<Client>) specification, pageRequest);
         } else {
             throw new ApiOperationException("Search not implemented for this entity [ " + clazz.getSimpleName() + " ]",
                     ApiStatus.UNSEARCHABLE_ENTITY);

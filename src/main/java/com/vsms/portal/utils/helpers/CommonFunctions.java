@@ -1,5 +1,7 @@
 package com.vsms.portal.utils.helpers;
 
+import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 
 import com.vsms.portal.data.model.User;
@@ -7,9 +9,10 @@ import com.vsms.portal.exception.ApiOperationException;
 import com.vsms.portal.utils.enums.ApiStatus;
 import com.vsms.portal.utils.enums.Strings;
 
-import org.apache.commons.logging.Log;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 public class CommonFunctions {
     private static final Logger LOG = LogManager.getLogger(CommonFunctions.class);
@@ -22,5 +25,22 @@ public class CommonFunctions {
         }
         LOG.debug("User extracted successfully ... | {} ", user.toString());
         return user;
+    }
+
+    public static PageRequest getPageData(Map<String, String> queryParams) {
+        int page = Integer.parseInt(queryParams.getOrDefault("page", "0"));
+        int size = Integer.parseInt(queryParams.getOrDefault("size", "10"));
+        String sortBy = queryParams.getOrDefault("sortBy", "id");
+        String sortDirection = queryParams.getOrDefault("sortDir", "desc");
+        Sort sort = Sort.by(getSortDirection(sortDirection), sortBy);
+        return PageRequest.of(page, size, sort);
+    }
+
+    private static Sort.Direction getSortDirection(String sortDir) {
+        if(sortDir.equalsIgnoreCase("asc")) {
+            return Sort.Direction.ASC;
+        } else {
+            return Sort.Direction.DESC;
+        }
     }
 }

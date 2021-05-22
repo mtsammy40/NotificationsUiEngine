@@ -1,12 +1,12 @@
 package com.vsms.portal.utils.models;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.Map;
 
 public class SmsBalanceResponse {
-    private Long id;
     private Long clientId;
-    private String runningBalance;
+    private BigDecimal runningBalance;
     private Date dateCreated;
     private Long status;
 
@@ -15,16 +15,7 @@ public class SmsBalanceResponse {
 
     public SmsBalanceResponse(Map<String, Object> map) {
         setClientId((long) (int) map.get("clientId"));
-        setId(Long.valueOf(map.get("id").toString()));
-        setRunningBalance((String) map.get("runningBalance"));
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
+        setRunningBalance(BigDecimal.valueOf((double) map.get("runningBalance")));
     }
 
     public Long getClientId() {
@@ -35,11 +26,11 @@ public class SmsBalanceResponse {
         this.clientId = clientId;
     }
 
-    public String getRunningBalance() {
+    public BigDecimal getRunningBalance() {
         return runningBalance;
     }
 
-    public void setRunningBalance(String runningBalance) {
+    public void setRunningBalance(BigDecimal runningBalance) {
         this.runningBalance = runningBalance;
     }
 

@@ -111,9 +111,9 @@ public class UserService {
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, password));
         } catch (DisabledException e) {
-            throw new Exception("USER_DISABLED", e);
+            throw new ApiOperationException("Account disabled", ApiStatus.ACCOUNT_DISABLED);
         } catch (BadCredentialsException e) {
-            throw new Exception("INVALID_CREDENTIALS", e);
+            throw new ApiOperationException("Invalid Credentials", ApiStatus.INVALID_CREDENTIALS);
         }
     }
 }

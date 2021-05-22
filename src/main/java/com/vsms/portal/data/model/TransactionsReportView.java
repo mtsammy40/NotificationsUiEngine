@@ -17,6 +17,7 @@ public class TransactionsReportView {
     private Timestamp transactionDate;
     private String transactionType;
     private String fullName;
+    private Client clientId;
 
     @Id
     @Column(name = "row_num", nullable = true)
@@ -86,6 +87,16 @@ public class TransactionsReportView {
 
     public void setFullName(String fullName) {
         this.fullName = fullName;
+    }
+
+    @ManyToOne()
+    @JoinColumn(name = "client_id", referencedColumnName = "id")
+    public Client getClientId() {
+        return clientId;
+    }
+
+    public void setClientId(Client clientId) {
+        this.clientId = clientId;
     }
 
     @Override
