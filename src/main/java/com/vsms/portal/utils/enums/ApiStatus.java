@@ -15,7 +15,8 @@ public enum ApiStatus {
     UNKNOWN_ERROR("801", "Unknown Error", HttpStatus.INTERNAL_SERVER_ERROR),
 
     // Third party errors -> 700 - 799
-    THIRD_PARTY_UNREACHABLE("701", "Third party unreachable", HttpStatus.FAILED_DEPENDENCY),
+    THIRD_PARTY_UNREACHABLE("701"
+            , "Third party unreachable", HttpStatus.FAILED_DEPENDENCY),
 
     // Authentication errors -> 600 - 699
     INVALID_CREDENTIALS("601", "Invalid Credentials", HttpStatus.UNAUTHORIZED),

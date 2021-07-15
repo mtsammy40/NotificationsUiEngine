@@ -4,6 +4,8 @@ import org.hibernate.annotations.Immutable;
 
 import javax.persistence.*;
 import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.Date;
 import java.util.Objects;
 
 @Entity
@@ -11,10 +13,10 @@ import java.util.Objects;
 @Table(name = "transactions_report_view")
 public class TransactionsReportView {
     private Long rowNum;
-    private Integer status;
+    private Long status;
     private String amount;
     private String mpesaRefId;
-    private Timestamp transactionDate;
+    private Date transactionDate;
     private String transactionType;
     private String fullName;
     private Client clientId;
@@ -31,11 +33,11 @@ public class TransactionsReportView {
 
     @Basic
     @Column(name = "status", nullable = true)
-    public Integer getStatus() {
+    public Long getStatus() {
         return status;
     }
 
-    public void setStatus(Integer status) {
+    public void setStatus(Long status) {
         this.status = status;
     }
 
@@ -61,11 +63,11 @@ public class TransactionsReportView {
 
     @Basic
     @Column(name = "transaction_date", nullable = true)
-    public Timestamp getTransactionDate() {
+    public Date getTransactionDate() {
         return transactionDate;
     }
 
-    public void setTransactionDate(Timestamp transactionDate) {
+    public void setTransactionDate(Date transactionDate) {
         this.transactionDate = transactionDate;
     }
 

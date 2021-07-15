@@ -30,7 +30,7 @@ public class CommonFunctions {
     public static PageRequest getPageData(Map<String, String> queryParams) {
         int page = Integer.parseInt(queryParams.getOrDefault("page", "0"));
         int size = Integer.parseInt(queryParams.getOrDefault("size", "10"));
-        String sortBy = queryParams.getOrDefault("sortBy", "id");
+        String sortBy = queryParams.getOrDefault("sortBy", "_default");
         String sortDirection = queryParams.getOrDefault("sortDir", "desc");
         Sort sort = Sort.by(getSortDirection(sortDirection), sortBy);
         return PageRequest.of(page, size, sort);

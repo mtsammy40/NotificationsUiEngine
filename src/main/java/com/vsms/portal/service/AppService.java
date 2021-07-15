@@ -1,6 +1,5 @@
 package com.vsms.portal.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 import com.vsms.portal.api.requests.PostMessageRequest;
@@ -18,9 +17,9 @@ import com.vsms.portal.data.repositories.TransactionViewRepository;
 import com.vsms.portal.data.repositories.UserRepository;
 import com.vsms.portal.data.specifications.DataSpecificationBuilder;
 import com.vsms.portal.exception.ApiOperationException;
-import com.vsms.portal.exception.RestCallException;
 import com.vsms.portal.utils.enums.ApiStatus;
 import com.vsms.portal.utils.enums.CoreRequestTypes;
+import com.vsms.portal.utils.enums.Strings;
 import com.vsms.portal.utils.helpers.AsyncRest;
 import com.vsms.portal.utils.helpers.CommonFunctions;
 import com.vsms.portal.utils.helpers.Rest;
@@ -31,7 +30,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
@@ -46,6 +45,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -211,20 +211,38 @@ public class AppService {
 
     private <T> Page<T> fetch(Specification<T> specification, Class<T> clazz, PageRequest pageRequest) throws Exception {
         Page page = null;
+        String defaultSortProperty = "id";
         String className = clazz.getName();
         if (className.equalsIgnoreCase(ChMessages.class.getName())) {
-            page = messagesRepository.findAll((Specification<ChMessages>) specification, pageRequest);
+            page = messagesRepository.findAll((Specification<ChMessages>) specification, getPageRequest(pageRequest, defaultSortProperty));
         } else if (className.equalsIgnoreCase(TransactionsReportView.class.getName())) {
-            page = transactionViewRepository.findAll((Specification<TransactionsReportView>) specification, pageRequest);
+            // update defaults
+            page = transactionViewRepository.findAll((Specification<TransactionsReportView>)
+                    specification, getPageRequest(pageRequest, "transactionDate"));
         } else if (className.equalsIgnoreCase(User.class.getName())) {
-            page = userRepository.findAll((Specification<User>) specification, pageRequest);
+            page = userRepository.findAll((Specification<User>) specification, getPageRequest(pageRequest, defaultSortProperty));
         } else if (className.equalsIgnoreCase(Client.class.getName())) {
-            page = clientRepository.findAll((Specification<Client>) specification, pageRequest);
+            page = clientRepository.findAll((Specification<Client>) specification, getPageRequest(pageRequest, defaultSortProperty));
         } else {
             throw new ApiOperationException("Search not implemented for this entity [ " + clazz.getSimpleName() + " ]",
                     ApiStatus.UNSEARCHABLE_ENTITY);
         }
         return page;
+    }
+
+    private PageRequest getPageRequest(PageRequest pageRequest, String defaultSortProperty) {
+        AtomicReference<String> sortBy = new AtomicReference<>();
+        AtomicReference<Sort.Direction> sortDirection = new AtomicReference<>();
+       pageRequest.getSort().stream().forEach((sortColumn) -> {
+            if (sortColumn.getProperty().equalsIgnoreCase(Strings.SORT_PROPERTY_DEFAULT.getValue())) {
+                sortBy.set(defaultSortProperty);
+            } else {
+                sortBy.set(sortColumn.getProperty());
+            }
+            sortDirection.set(sortColumn.getDirection());
+        });
+        Sort sort = Sort.by(sortDirection.get(), sortBy.get());
+        return PageRequest.of(pageRequest.getPageNumber(), pageRequest.getPageSize(), sort);
     }
 
     /**
@@ -240,10 +258,10 @@ public class AppService {
         searchString = StringUtils.isBlank(searchString) ? "" : searchString;
         User user = CommonFunctions.extractUser(request);
         if (!user.hasAdminRole()) {
-            LOG.info("User is not admin, attaching client id {} to search string...", user.getClientId().getId());
+            LOG.debug("User is not admin, attaching client id {} to search string...", user.getClientId().getId());
             StringBuilder searchStringbuilder = new StringBuilder(searchString);
             searchStringbuilder.insert(0, "clientId:" + user.getClientId().getId().toString() + ",");
-            LOG.info("BUILDER >> {}", searchStringbuilder);
+            LOG.debug("Builder >> {}", searchStringbuilder);
             searchString = searchStringbuilder.toString();
         } else {
             LOG.debug("User is admin, will not append clientId in searchString... | {}", searchString);
